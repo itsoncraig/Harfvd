@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <title>Unified Data Intelligence Platform MVP</title>
+  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/papaparse@5.4.1/papaparse.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <style>
+    body { 
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      padding: 20px; 
+      max-width: 1200px;
+      margin: 0 auto;
+      background: #f5f5f5;
+    }
+    .container {
+      background: white;
+      padding: 30px;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    h1 { color: #333; margin-top: 0; }
+    .upload-section {
+      margin: 20px 0;
+      padding: 20px;
+      background: #f9f9f9;
+      border-radius: 4px;
+      border: 2px dashed #ddd;
+    }
+    .upload-section.drag-over {
+      border-color: #4CAF50;
+      background: #e8f5e9;
+    }
+    input[type="file"] {
+      padding: 10px;
+      cursor: pointer;
+    }
+    .error {
+      color: #d32f2f;
+      background: #ffebee;
+      padding: 12px;
+      border-radius: 4px;
+      margin: 10px 0;
+    }
+    .success {
+      color: #388e3c;
+      background: #e8f5e9;
+      padding: 12px;
+      border-radius: 4px;
+      margin: 10px 0;
+    }
+    .loading {
+      color: #1976d2;
+      padding: 12px;
+      font-weight: bold;
+    }
+    table { 
+      border-collapse: collapse; 
+      width: 100%; 
+      margin-top: 10px;
+      font-size: 14px;
+    }
+    th, td { 
+      border: 1px solid #ddd; 
+      padding: 8px;
+      text-align: left;
+    }
+    th { 
+      background: #4CAF50;
+      color: white;
+      font-weight: 600;
+    }
+    tr:nth-child(even) { background: #f9f9f9; }
+    tr:hover { background: #f5f5f5; }
+    .insight-card {
+      background: #e3f2fd;
+      padding: 15px;
+      margin: 10px 0;
+      border-radius: 4px;
+      border-left: 4px solid #2196F3;
+    }
+    .insight-card.suggestion {
+      background: #fff3e0;
+      border-left-color: #ff9800;
+    }
+    .insight-card.warning {
+      background: #fff9c4;
+      border-left-color: #ffc107;
+    }
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 15px;
+      margin: 20px 0;
+    }
+    .stat-box {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+    .stat-label {
+      font-size: 12px;
+      opacity: 0.9;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    .stat-value {
+      font-size: 28px;
+      font-weight: bold;
+      margin-top: 5px;
+    }
+    .pagination {
+      margin: 20px 0;
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+    button {
+      padding: 8px 16px;
+      background: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    button:hover { background: #45a049; }
+    button:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+  </style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel">
+
+function App() {
+  const [data, setData] = React.useState([]);
+  const [insights, setInsights] = React.useState([]);
+  const [error, setError] = React.useState('');
+  const [loading, setLoading] = React.useState(false);
+  const [success, setSuccess] = React.useState('');
+  const [currentPage, setCurrentPage] = React.useState(1);
+  const rowsPerPage = 20;
+
+  function handleFileUpload(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.name.toLowerCase().endsWith('.csv')) {
+      setError('Please upload a CSV file');
+      setData([]);
+      setInsights([]);
+      return;
+    }
+
+    // Check file size (limit to 10MB)
+    if (file.size > 10 * 1024 * 1024) {
+      setError('File is too large. Please upload a file smaller than 10MB');
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+    setSuccess('');
+
+    Papa.parse(file, {
+      header: true,
+      skipEmptyLines: true,
+      dynamicTyping: true,
+      complete: function(results) {
+        try {
+          if (results.errors && results.errors.length > 0) {
+            setError(`CSV parsing errors: ${results.errors[0].message}`);
+            setLoading(false);
+            return;
+          }
+
+          const parsed = results.data;
+          
+          if (!parsed || parsed.length === 0) {
+            setError('The CSV file is empty or has no data rows');
+            setLoading(false);
+            return;
+          }
+
+          if (!parsed[0] || Object.keys(parsed[0]).length === 0) {
+            setError('The CSV file has no columns');
+            setLoading(false);
+            return;
+          }
+
+          setData(parsed);
+          generateInsights(parsed);
+          setSuccess(`Successfully loaded ${parsed.length} rows with ${Object.keys(parsed[0]).length} columns`);
+          setLoading(false);
+          setCurrentPage(1);
+        } catch (err) {
+          setError(`Error processing file: ${err.message}`);
+          setLoading(false);
+        }
+      },
+      error: function(err) {
+        setError(`Failed to parse CSV: ${err.message}`);
+        setLoading(false);
+      }
+    });
+  }
+
+  function generateInsights(dataset) {
+    if (!dataset.length) return;
+
+    const keys = Object.keys(dataset[0]);
+    let out = [];
+
+    // Analyze each column
+    const columnStats = {};
+    keys.forEach(k => {
+      const values = dataset.map(r => r[k]);
+      const nums = values.filter(v => typeof v === 'number' && !isNaN(v));
+      const strings = values.filter(v => typeof v === 'string');
+      const nulls = values.filter(v => v === null || v === undefined || v === '');
+      
+      columnStats[k] = {
+        numeric: nums.length,
+        string: strings.length,
+        null: nulls.length,
+        total: values.length
+      };
+
+      // Calculate statistics for numeric columns
+      if (nums.length > 0) {
+        const sorted = [...nums].sort((a, b) => a - b);
+        const sum = nums.reduce((a, b) => a + b, 0);
+        const avg = sum / nums.length;
+        const min = sorted[0];
+        const max = sorted[sorted.length - 1];
+        const median = sorted.length % 2 === 0 
+          ? (sorted[sorted.length/2 - 1] + sorted[sorted.length/2]) / 2
+          : sorted[Math.floor(sorted.length/2)];
+        
+        // Calculate standard deviation
+        const variance = nums.reduce((acc, val) => acc + Math.pow(val - avg, 2), 0) / nums.length;
+        const stdDev = Math.sqrt(variance);
+
+        columnStats[k].stats = { avg, min, max, median, stdDev };
+        
+        out.push({
+          type: 'stat',
+          text: `📊 ${k}: Avg=${avg.toFixed(2)}, Min=${min.toFixed(2)}, Max=${max.toFixed(2)}, Median=${median.toFixed(2)}, StdDev=${stdDev.toFixed(2)}`
+        });
+      }
+
+      // Warn about missing data
+      if (nulls.length > 0) {
+        const pct = (nulls.length / values.length * 100).toFixed(1);
+        out.push({
+          type: 'warning',
+          text: `⚠️ Column "${k}" has ${nulls.length} missing values (${pct}%)`
+        });
+      }
+
+      // Detect categorical columns
+      if (strings.length > 0 && strings.length === values.length) {
+        const unique = [...new Set(strings)];
+        if (unique.length < 20 && unique.length < values.length * 0.5) {
+          out.push({
+            type: 'stat',
+            text: `🏷️ Column "${k}" appears categorical with ${unique.length} unique values: ${unique.slice(0, 5).join(', ')}${unique.length > 5 ? '...' : ''}`
+          });
+        }
+      }
+    });
+
+    // Data quality insights
+    const totalCells = dataset.length * keys.length;
+    const totalNulls = Object.values(columnStats).reduce((sum, col) => sum + col.null, 0);
+    const nullPct = (totalNulls / totalCells * 100).toFixed(1);
+    
+    if (totalNulls > 0) {
+      out.push({
+        type: 'warning',
+        text: `📉 Data Completeness: ${(100 - nullPct).toFixed(1)}% (${totalNulls} missing values out of ${totalCells} total cells)`
+      });
+    } else {
+      out.push({
+        type: 'stat',
+        text: `✅ Data Completeness: 100% - No missing values detected`
+      });
+    }
+
+    // Dataset size insights
+    if (dataset.length > 1000) {
+      out.push({
+        type: 'suggestion',
+        text: `💡 Large dataset (${dataset.length} rows): Consider implementing pagination, data sampling, or server-side processing`
+      });
+    }
+
+    if (dataset.length > 100) {
+      out.push({
+        type: 'suggestion',
+        text: `📈 Dataset size suitable for ML: Forecasting, clustering, and anomaly detection could be valuable`
+      });
+    }
+
+    // Check for potential ID columns
+    keys.forEach(k => {
+      const values = dataset.map(r => r[k]);
+      const unique = new Set(values);
+      if (unique.size === dataset.length && unique.size > 10) {
+        out.push({
+          type: 'stat',
+          text: `🔑 Column "${k}" appears to be a unique identifier (${unique.size} unique values)`
+        });
+      }
+    });
+
+    // Actionable suggestions
+    out.push({
+      type: 'suggestion',
+      text: `📊 Next Steps: Add interactive charts (Recharts/Chart.js) for visualization`
+    });
+    
+    out.push({
+      type: 'suggestion',
+      text: `🔌 Next Steps: Connect to backend API for real-time analytics and data persistence`
+    });
+    
+    out.push({
+      type: 'suggestion',
+      text: `🧹 Next Steps: Implement data cleaning (handle missing values, remove duplicates, normalize data)`
+    });
+    
+    out.push({
+      type: 'suggestion',
+      text: `💾 Next Steps: Add export functionality (CSV, Excel, PDF reports)`
+    });
+
+    setInsights(out);
+  }
+
+  // Pagination logic
+  const totalPages = Math.ceil(data.length / rowsPerPage);
+  const startIdx = (currentPage - 1) * rowsPerPage;
+  const endIdx = startIdx + rowsPerPage;
+  const currentData = data.slice(startIdx, endIdx);
+
+  return (
+    <div className="container">
+      <h1>🚀 Unified Data Intelligence Platform (MVP)</h1>
+      <p style={{color: '#666'}}>Upload a CSV file to generate comprehensive data insights and analytics</p>
+
+      <div className="upload-section">
+        <input 
+          type="file" 
+          accept=".csv"
+          onChange={handleFileUpload}
+          style={{display: 'block', marginBottom: '10px'}}
+        />
+        <small style={{color: '#666'}}>Accepted formats: CSV (max 10MB)</small>
+      </div>
+
+      {loading && <div className="loading">⏳ Processing your data...</div>}
+      {error && <div className="error">❌ {error}</div>}
+      {success && <div className="success">✅ {success}</div>}
+
+      {data.length > 0 && (
+        <>
+          <div className="stats-grid">
+            <div className="stat-box">
+              <div className="stat-label">Total Rows</div>
+              <div className="stat-value">{data.length.toLocaleString()}</div>
+            </div>
+            <div className="stat-box" style={{background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)'}}>
+              <div className="stat-label">Total Columns</div>
+              <div className="stat-value">{Object.keys(data[0]).length}</div>
+            </div>
+            <div className="stat-box" style={{background: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)'}}>
+              <div className="stat-label">Data Points</div>
+              <div className="stat-value">{(data.length * Object.keys(data[0]).length).toLocaleString()}</div>
+            </div>
+          </div>
+
+          <h2>📈 Insights & Analysis</h2>
+          {insights.map((insight, idx) => (
+            <div key={idx} className={`insight-card ${insight.type}`}>
+              {insight.text}
+            </div>
+          ))}
+
+          <h2>📋 Data Preview</h2>
+          <div className="pagination">
+            <button 
+              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+              disabled={currentPage === 1}
+            >
+              ← Previous
+            </button>
+            <span>Page {currentPage} of {totalPages} (Showing {startIdx + 1}-{Math.min(endIdx, data.length)} of {data.length} rows)</span>
+            <button 
+              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+              disabled={currentPage === totalPages}
+            >
+              Next →
+            </button>
+          </div>
+
+          <div style={{overflowX: 'auto'}}>
+            <table>
+              <thead>
+                <tr>
+                  <th>#</th>
+                  {data[0] && Object.keys(data[0]).map(k => <th key={k}>{k}</th>)}
+                </tr>
+              </thead>
+              <tbody>
+                {currentData.map((row, i) => (
+                  <tr key={i}>
+                    <td>{startIdx + i + 1}</td>
+                    {Object.values(row).map((v, j) => (
+                      <td key={j}>{v !== null && v !== undefined ? v.toString() : '—'}</td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
+
+      <hr style={{margin: '40px 0', border: 'none', borderTop: '2px solid #eee'}}/>
+      <h3>🗺️ Development Roadmap</h3>
+      <div style={{background: '#f5f5f5', padding: '20px', borderRadius: '4px', fontFamily: 'monospace', fontSize: '14px'}}>
+        <div>✅ <strong>Phase 1 (MVP):</strong> File upload, basic insights, data preview</div>
+        <div>⏳ <strong>Phase 2:</strong> Backend API (FastAPI/Node.js), Database (PostgreSQL/MongoDB)</div>
+        <div>⏳ <strong>Phase 3:</strong> Machine Learning (forecasting, clustering, anomaly detection)</div>
+        <div>⏳ <strong>Phase 4:</strong> Advanced data cleaning & transformation engine</div>
+        <div>⏳ <strong>Phase 5:</strong> Authentication & user management</div>
+        <div>⏳ <strong>Phase 6:</strong> Real-time analytics (WebSockets)</div>
+        <div>⏳ <strong>Phase 7:</strong> Interactive dashboards with charts & KPIs</div>
+        <div>⏳ <strong>Phase 8:</strong> Export features (CSV, Excel, PDF reports)</div>
+        <div>⏳ <strong>Phase 9:</strong> Data source connectors (APIs, databases, cloud storage)</div>
+        <div>⏳ <strong>Phase 10:</strong> Mobile app & advanced AI features</div>
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+
+</script>
+</body>
+</html>

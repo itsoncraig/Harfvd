@@ -1,0 +1,31 @@
+product_id,product_name,category,price,quantity_sold,revenue,rating,stock_level
+P001,Laptop Pro,Electronics,1299.99,45,58499.55,4.5,23
+P002,Wireless Mouse,Electronics,29.99,120,3598.80,4.8,67
+P003,Office Chair,Furniture,249.99,32,7999.68,4.2,15
+P004,Standing Desk,Furniture,599.99,18,10799.82,4.7,8
+P005,USB-C Cable,Electronics,19.99,200,3998.00,4.3,150
+P006,Monitor 27",Electronics,349.99,55,19249.45,4.6,42
+P007,Desk Lamp,Furniture,39.99,78,3119.22,4.4,89
+P008,Keyboard Mechanical,Electronics,129.99,67,8709.33,4.9,34
+P009,Webcam HD,Electronics,89.99,95,8549.05,4.1,56
+P010,Ergonomic Footrest,Furniture,49.99,41,2049.59,4.0,28
+P011,Laptop Stand,Electronics,59.99,88,5279.12,4.5,71
+P012,Cable Management,Electronics,14.99,156,2338.44,4.2,203
+P013,Desk Organizer,Furniture,24.99,103,2573.97,4.3,95
+P014,Noise Cancelling Headphones,Electronics,299.99,62,18599.38,4.8,19
+P015,Phone Stand,Electronics,15.99,134,2142.66,4.1,178
+P016,Tablet,Electronics,499.99,38,18999.62,4.6,27
+P017,Bookshelf,Furniture,179.99,25,4499.75,4.4,12
+P018,Filing Cabinet,Furniture,159.99,19,3039.81,4.0,9
+P019,Whiteboard,Furniture,89.99,44,3959.56,4.3,31
+P020,Printer Wireless,Electronics,199.99,51,10199.49,4.2,22
+P021,Paper Shredder,Electronics,79.99,36,2879.64,4.1,18
+P022,Desk Mat,Furniture,34.99,142,4968.58,4.7,165
+P023,Monitor Arm,Electronics,119.99,29,3479.71,4.6,14
+P024,LED Strip Lights,Electronics,25.99,189,4912.11,4.4,223
+P025,Storage Box,Furniture,19.99,167,3338.33,4.0,201
+P026,Surge Protector,Electronics,32.99,98,3232.02,4.5,114
+P027,Laptop Bag,Electronics,69.99,73,5109.27,4.3,58
+P028,Desk Calendar,Furniture,12.99,215,2792.85,4.1,267
+P029,Notebook Set,Furniture,18.99,178,3380.22,4.2,198
+P030,Pen Holder,Furniture,8.99,245,2202.55,3.9,289
